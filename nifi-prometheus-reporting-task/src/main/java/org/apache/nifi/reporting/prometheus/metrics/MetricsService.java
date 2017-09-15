@@ -41,7 +41,7 @@ public class MetricsService {
         this.procProcessingTime = Gauge.build().name(PROC_PROCESSING_NS.getName()).help(PROC_PROCESSING_NS.getHelp()).labelNames(PROCESSOR_LABELS).register(registry);
         this.procInvocations = Gauge.build().name(PROC_INVOCATIONS.getName()).help(PROC_INVOCATIONS.getHelp()).labelNames(PROCESSOR_LABELS).register(registry);
         this.procInputBytes = Gauge.build().name(PROC_INPUT_BYTES.getName()).help(PROC_INPUT_BYTES.getHelp()).labelNames(PROCESSOR_LABELS).register(registry);
-        this.procOutputBytes = Gauge.build().name(PROC_INVOCATIONS.getName()).help(PROC_INVOCATIONS.getHelp()).labelNames(PROCESSOR_LABELS).register(registry);
+        this.procOutputBytes = Gauge.build().name(PROC_OUTPUT_BYTES.getName()).help(PROC_OUTPUT_BYTES.getHelp()).labelNames(PROCESSOR_LABELS).register(registry);
         this.procInputCount = Gauge.build().name(PROC_INPUT_COUNT.getName()).help(PROC_INPUT_COUNT.getHelp()).labelNames(PROCESSOR_LABELS).register(registry);
         this.procOutputCount = Gauge.build().name(PROC_OUTPUT_COUNT.getName()).help(PROC_OUTPUT_COUNT.getHelp()).labelNames(PROCESSOR_LABELS).register(registry);
 
