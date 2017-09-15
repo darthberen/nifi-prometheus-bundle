@@ -24,13 +24,13 @@ public final class MetricNames {
         "processor_active_threads",
         "The number of active threads for a processor"
     );
-    protected static final MetricInfo PROC_BYTES_READ = new MetricInfo(
+    protected static final MetricInfo PROC_BYTES_READ = new MetricInfo( // DONE
         "processor_bytes_read",
-        "The number of bytes that a processor has read over the past 5 minutes"
+        "The number of bytes read from the Content Repository by this Processor in the past 5 minutes"
     );
-    protected static final MetricInfo PROC_BYTES_WRITTEN = new MetricInfo(
+    protected static final MetricInfo PROC_BYTES_WRITTEN = new MetricInfo( // DONE
         "processor_bytes_written",
-        "The number of bytes that a processor has received over the past 5 minutes"
+        "The number of bytes written to the Content Repository by this Processor in the past 5 minutes"
     );
     protected static final MetricInfo PROC_PROCESSING_NS = new MetricInfo(
         "processor_processing_time_ns",
@@ -39,6 +39,22 @@ public final class MetricNames {
     protected static final MetricInfo PROC_INVOCATIONS = new MetricInfo(
         "processor_invocations",
         "The number of times that a processor has been invoked over the past 5 minutes"
+    );
+    protected static final MetricInfo PROC_INPUT_BYTES = new MetricInfo( // DONE
+        "processor_input_bytes",
+        "The cumulative size in bytes of all FlowFiles that this Processor has pulled from its queues in the past 5 minutes"
+    );
+    protected static final MetricInfo PROC_OUTPUT_BYTES = new MetricInfo( // DONE
+        "processor_output_bytes",
+        "The cumulative size in bytes of all FlowFiles that this Processor has transferred to downstream queues in the past 5 minutes"
+    );
+    protected static final MetricInfo PROC_INPUT_COUNT = new MetricInfo( // DONE
+        "processor_input_count",
+        "The number of FlowFiles that this Processor has pulled from its queues in the past 5 minutes"
+    );
+    protected static final MetricInfo PROC_OUTPUT_COUNT = new MetricInfo( // DONE
+        "processor_output_cout",
+        "The number of FlowFiles that this Processor has transferred to downstream queues in the past 5 minutes"
     );
 
     /***** Port Metrics *****/
@@ -112,9 +128,9 @@ public final class MetricNames {
         "proc_group_active_threads",
         "The number of active threads in a process group"
     );
-    protected static final MetricInfo PROC_GROUP_BYTES_READ = new MetricInfo( // No metrics?
+    protected static final MetricInfo PROC_GROUP_BYTES_READ = new MetricInfo( // DONE
         "proc_group_bytes_read",
-        "The number of bytes read in a process group"
+        "The number of bytes read from the Content Repository by Processors in this Process Group in the past 5 minutes"
     );
     protected static final MetricInfo PROC_GROUP_BYTES_RECEIVED = new MetricInfo( // No metrics?
         "proc_group_bytes_received",
@@ -124,13 +140,13 @@ public final class MetricNames {
         "proc_group_bytes_sent",
         "The number of bytes sent by a process group"
     );
-    protected static final MetricInfo PROC_GROUP_BYTES_TRANSFERRED = new MetricInfo(
+    protected static final MetricInfo PROC_GROUP_BYTES_TRANSFERRED = new MetricInfo( // DONE
         "proc_group_bytes_transferred",
-        "The number of bytes sent by a process group"
+        "The number of bytes read from or written to the Content Repository by Processors in this Process Group in the past 5 minutes"
     );
-    protected static final MetricInfo PROC_GROUP_BYTES_WRITTEN = new MetricInfo(
+    protected static final MetricInfo PROC_GROUP_BYTES_WRITTEN = new MetricInfo( // DONE
         "proc_group_bytes_written",
-        "The number of bytes sent by a process group"
+        "The number of bytes written to the Content Repository by Processors in this Process Group in the past 5 minutes"
     );
     protected static final MetricInfo PROC_GROUP_FLOW_FILES_RECEIVED = new MetricInfo( // No metrics?
         "proc_group_flow_files_received",
@@ -142,39 +158,39 @@ public final class MetricNames {
     );
     protected static final MetricInfo PROC_GROUP_FLOW_FILES_TRANSFERRED = new MetricInfo(
         "proc_group_flow_files_transferred",
-        "The number of bytes sent by a process group"
+        "XXX"
     );
-    protected static final MetricInfo PROC_GROUP_INPUT_CONTENT_SIZE = new MetricInfo(
+    protected static final MetricInfo PROC_GROUP_INPUT_CONTENT_SIZE = new MetricInfo( // DONE
         "proc_group_input_content_size",
-        "The number of bytes sent by a process group"
+        "The cumulative size in bytes of FlowFiles that have entered this Process Group via its Input Ports in the past 5 minutes"
     );
-    protected static final MetricInfo PROC_GROUP_INPUT_COUNT = new MetricInfo(
+    protected static final MetricInfo PROC_GROUP_INPUT_COUNT = new MetricInfo(  // DONE
         "proc_group_input_count",
-        "The number of bytes sent by a process group"
+        "The number of FlowFiles that have entered this Process Group via its Input Ports in the past 5 minutes"
     );
-    protected static final MetricInfo PROC_GROUP_OUTPUT_CONTENT_SIZE = new MetricInfo(
+    protected static final MetricInfo PROC_GROUP_OUTPUT_CONTENT_SIZE = new MetricInfo( // DONE
         "proc_group_output_content_size",
-        "The number of bytes sent by a process group"
+        "The cumulative size in bytes of FlowFiles that have exited this Process Group via its Output Ports in the past 5 minutes"
     );
-    protected static final MetricInfo PROC_GROUP_OUTPUT_COUNT = new MetricInfo(
+    protected static final MetricInfo PROC_GROUP_OUTPUT_COUNT = new MetricInfo( // DONE
         "proc_group_output_count",
-        "The number of bytes sent by a process group"
+        "The number of FlowFiles that have exited this Process Group via its Output Ports in the past 5 minutes"
     );
-    protected static final MetricInfo PROC_GROUP_QUEUED_CONTENT_SIZE = new MetricInfo(
+    protected static final MetricInfo PROC_GROUP_QUEUED_CONTENT_SIZE = new MetricInfo( // DONE
         "proc_group_queued_content_size",
-        "The number of bytes sent by a process group"
+        "The cumulative size in bytes of all FlowFiles queued in all Connections of this Process Group"
     );
-    protected static final MetricInfo PROC_GROUP_QUEUED_COUNT = new MetricInfo(
+    protected static final MetricInfo PROC_GROUP_QUEUED_COUNT = new MetricInfo( // DONE
         "proc_group_queued_count",
-        "The number of bytes sent by a process group"
+        "The number of FlowFiles queued in all Connections of this Process Group"
     );
-    protected static final MetricInfo PROC_GROUP_PROCESSING_NS = new MetricInfo(
+    protected static final MetricInfo PROC_GROUP_PROCESSING_NS = new MetricInfo( // DONE
         "proc_group_processing_time_ns",
-        "The number of bytes sent by a process group"
+        "The total number of thread-nanoseconds that the Processors within this Process Group have used to complete their tasks in the past 5 minutes"
     );
-    protected static final MetricInfo PROC_GROUP_STATUS_COUNT = new MetricInfo(
+    protected static final MetricInfo PROC_GROUP_STATUS_COUNT = new MetricInfo( // DONE
         "proc_group_status_count",
-        "The number of processors and/or ports for this processor group with the given status"
+        "The number of Processors and/or Ports for this Process Group with the given status"
     );
 
     /***** JVM Metrics *****/

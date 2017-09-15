@@ -21,6 +21,7 @@ public class MetricsService {
     //private Logger logger = LoggerFactory.getLogger(getClass().getName());
 
     private Gauge procFlowFilesReceived, procFlowFilesRemoved, procFlowFilesSent, procActiveThreads, procBytesRead, procBytesWritten, procProcessingTime, procInvocations;
+    private Gauge procInputBytes, procOutputBytes, procInputCount, procOutputCount;
     private Gauge portActiveThreads, portInputCount, portInputBytes, portOutputCount, portOutputBytes;
     private Gauge connBackPressureBytes, connBackPressureObj, connInputCount, connInputBytes, connOutputCount, connOutputBytes, connQueuedCount, connQueuedBytes;
     private Gauge procGroupActiveThreads, procGroupBytesRead, procGroupBytesReceived, procGroupBytesSent, procGroupBytesTransferred, procGroupBytesWritten, procGroupFlowFilesReceived, procGroupFlowFilesSent, procGroupStatusCount;
@@ -39,6 +40,10 @@ public class MetricsService {
         this.procBytesWritten = Gauge.build().name(PROC_BYTES_WRITTEN.getName()).help(PROC_BYTES_WRITTEN.getHelp()).labelNames(PROCESSOR_LABELS).register(registry);
         this.procProcessingTime = Gauge.build().name(PROC_PROCESSING_NS.getName()).help(PROC_PROCESSING_NS.getHelp()).labelNames(PROCESSOR_LABELS).register(registry);
         this.procInvocations = Gauge.build().name(PROC_INVOCATIONS.getName()).help(PROC_INVOCATIONS.getHelp()).labelNames(PROCESSOR_LABELS).register(registry);
+        this.procInputBytes = Gauge.build().name(PROC_INPUT_BYTES.getName()).help(PROC_INPUT_BYTES.getHelp()).labelNames(PROCESSOR_LABELS).register(registry);
+        this.procOutputBytes = Gauge.build().name(PROC_INVOCATIONS.getName()).help(PROC_INVOCATIONS.getHelp()).labelNames(PROCESSOR_LABELS).register(registry);
+        this.procInputCount = Gauge.build().name(PROC_INPUT_COUNT.getName()).help(PROC_INPUT_COUNT.getHelp()).labelNames(PROCESSOR_LABELS).register(registry);
+        this.procOutputCount = Gauge.build().name(PROC_OUTPUT_COUNT.getName()).help(PROC_OUTPUT_COUNT.getHelp()).labelNames(PROCESSOR_LABELS).register(registry);
 
         this.portActiveThreads = Gauge.build().name(PORT_ACTIVE_THREADS.getName()).help(PORT_ACTIVE_THREADS.getHelp()).labelNames(PORT_LABELS).register(registry);
         this.portInputCount = Gauge.build().name(PORT_INPUT_COUNT.getName()).help(PORT_INPUT_COUNT.getHelp()).labelNames(PORT_LABELS).register(registry);
@@ -268,12 +273,16 @@ public class MetricsService {
             status.getType()
         };
 
-        procFlowFilesReceived.labels(labels).set(new Double(status.getInputCount()));
+        procFlowFilesReceived.labels(labels).set(new Double(status.getFlowFilesReceived()));
         procFlowFilesRemoved.labels(labels).set(new Double(status.getFlowFilesRemoved()));
-        procFlowFilesSent.labels(labels).set(new Double(status.getOutputCount()));
+        procFlowFilesSent.labels(labels).set(new Double(status.getFlowFilesSent()));
         procActiveThreads.labels(labels).set(new Double(status.getActiveThreadCount()));
-        procBytesRead.labels(labels).set(new Double(status.getInputBytes()));
-        procBytesWritten.labels(labels).set(new Double(status.getOutputBytes()));
+        procInputCount.labels(labels).set(new Double(status.getInputCount()));
+        procOutputCount.labels(labels).set(new Double(status.getOutputCount()));
+        procBytesRead.labels(labels).set(new Double(status.getBytesRead()));
+        procBytesWritten.labels(labels).set(new Double(status.getBytesWritten()));
+        procInputBytes.labels(labels).set(new Double(status.getInputBytes()));
+        procOutputBytes.labels(labels).set(new Double(status.getOutputBytes()));
         procProcessingTime.labels(labels).set(new Double(status.getProcessingNanos()));
         procInvocations.labels(labels).set(new Double(status.getInvocations()));
     }
