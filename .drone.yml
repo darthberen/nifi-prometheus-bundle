@@ -22,4 +22,4 @@ pipeline:
             - git submodule update --init --recursive
             - printf '\nhost_key_checking=False' >> ansible.cfg
             - ansible-galaxy install -r requirements/requirements.yml
-            - ansible-playbook -u icedsdeploy conprem_nifi.yml -i production/hosts --tags bundles_install
+            - ansible-playbook -u icedsdeploy onprem_nifi.yml -i production/hosts --tags bundles_install
