@@ -1,0 +1,25 @@
+---
+workspace:
+    base: /java
+
+pipeline:
+    build:
+        image: "maven:3-jdk-8"
+        commands:
+          - mvn install
+        when:
+          event: [pull_request, push]
+          branch: master
+
+    deploy:
+        image: cystrike/ansible:latest
+        when:
+            branch: master
+            event: push
+        commands:
+            - git clone https://github.eng.fireeye.com/ICE/opsbooks.git
+            - cd opsbooks
+            - git submodule update --init --recursive
+            - printf '\nhost_key_checking=False' >> ansible.cfg
+            - ansible-galaxy install -r requirements/requirements.yml
+            - ansible-playbook -u icedsdeploy conprem_nifi.yml -i production/hosts --tags bundles_install

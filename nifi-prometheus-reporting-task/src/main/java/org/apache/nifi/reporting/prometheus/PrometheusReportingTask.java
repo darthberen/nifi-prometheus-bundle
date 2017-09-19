@@ -1,12 +1,21 @@
 package org.apache.nifi.reporting.prometheus;
 
-import io.prometheus.client.*;
-//import com.google.common.collect.Lists;
+import java.io.IOException;
+import java.util.Map;
+import java.util.HashMap;
+import java.util.ArrayList;
+import java.util.List;
+
+import com.kstruct.gethostname4j.Hostname;
+
 import com.yammer.metrics.core.VirtualMachineMetrics;
+
+import io.prometheus.client.*;
+import io.prometheus.client.exporter.PushGateway;
+
 import org.apache.nifi.annotation.documentation.CapabilityDescription;
 import org.apache.nifi.annotation.documentation.Tags;
 import org.apache.nifi.annotation.lifecycle.OnScheduled;
-//import org.apache.nifi.components.AllowableValue;
 import org.apache.nifi.components.PropertyDescriptor;
 import org.apache.nifi.controller.ConfigurationContext;
 import org.apache.nifi.controller.status.ConnectionStatus;
@@ -16,31 +25,24 @@ import org.apache.nifi.controller.status.ProcessorStatus;
 import org.apache.nifi.processor.util.StandardValidators;
 import org.apache.nifi.reporting.AbstractReportingTask;
 import org.apache.nifi.reporting.ReportingContext;
-
 import org.apache.nifi.reporting.prometheus.metrics.MetricsService;
-
-import java.io.IOException;
-import java.util.Map;
-import java.util.HashMap;
-import java.util.ArrayList;
-import java.util.List;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import com.kstruct.gethostname4j.Hostname;
-
-
-@Tags({"reporting", "prometheus", "metrics"})
-@CapabilityDescription("Publishes metrics from NiFi to prometheus. For accurate and informative reporting, components should have unique names.")
+/**
+ * The Prometheus NiFi reporting task.  It will push NiFi and JVM metrics to a Prometheus Push Gateway.
+ */
+@Tags({ "reporting", "prometheus", "metrics" })
+@CapabilityDescription("Publishes metrics from NiFi to a Prometheus Push Gateway.  For accurate and informative reporting, components should have unique names.")
 public class PrometheusReportingTask extends AbstractReportingTask {
     private Logger logger = LoggerFactory.getLogger(getClass().getName());
     private MetricsService metricsService;
-    private PrometheusMetricRegistryBuilder prometheusMetricRegistryBuilder;
     private CollectorRegistry collectorRegistry;
-    private String statusId;
-    private String jobName;
     private volatile VirtualMachineMetrics virtualMachineMetrics;
+    private String gateway, jobName;
+    private Map<String, String> sharedLabels;
+    private PushGateway pushGateway;
 
     /***** Define the exported reporting task properties *****/
     static final PropertyDescriptor PROMETHEUS_GATEWAY = new PropertyDescriptor.Builder()
@@ -51,13 +53,18 @@ public class PrometheusReportingTask extends AbstractReportingTask {
             .addValidator(StandardValidators.NON_EMPTY_VALIDATOR)
             .build();
     static final PropertyDescriptor PROMETHEUS_JOB_NAME = new PropertyDescriptor.Builder()
-        .name("Prometheus Job Name")
-        .description("The desired name for this Prometheus job")
-        .required(true)
-        .expressionLanguageSupported(false)
-        .addValidator(StandardValidators.NON_EMPTY_VALIDATOR)
-        .build();
+            .name("Prometheus Job Name")
+            .description("The desired name for this Prometheus job")
+            .required(true)
+            .expressionLanguageSupported(false)
+            .addValidator(StandardValidators.NON_EMPTY_VALIDATOR)
+            .build();
 
+    /**
+     * Sets up the properties with NiFi that the reporting task requires.
+     * 
+     * @return list of NiFi properties that should be exposed to the end user
+     */
     @Override
     protected List<PropertyDescriptor> getSupportedPropertyDescriptors() {
         final List<PropertyDescriptor> properties = new ArrayList<>();
@@ -66,72 +73,73 @@ public class PrometheusReportingTask extends AbstractReportingTask {
         return properties;
     }
 
+    /**
+     * Run a single time when the reporting task is initially started.
+     * 
+     * @param context the NiFi configuration context for this reporting task
+     */
     @OnScheduled
     public void setup(final ConfigurationContext context) {
-        logger.warn("Setting up the collector registry and register all processor metrics");
-        collectorRegistry = getCollectorRegistry();
-        prometheusMetricRegistryBuilder = getMetricRegistryBuilder(collectorRegistry);
-        metricsService = getMetricsService(collectorRegistry);
-        virtualMachineMetrics = VirtualMachineMetrics.getInstance(); 
-    }
-
-    @Override
-    public void onTrigger(ReportingContext context){
-        final ProcessGroupStatus status = context.getEventAccess().getControllerStatus();
-        statusId = status.getId();
-        String gateway = context.getProperty(PROMETHEUS_GATEWAY).getValue();
+        logger.debug("setting up the collector registry and registering all processor metrics");
+        gateway = context.getProperty(PROMETHEUS_GATEWAY).getValue();
         jobName = context.getProperty(PROMETHEUS_JOB_NAME).getValue();
 
-        String hostname = Hostname.getHostname();
-        Map<String,String> labels = new HashMap<String,String>();
-        labels.put("instance", hostname);
+        collectorRegistry = new CollectorRegistry();
+        pushGateway = new PushGateway(gateway);
+        metricsService = new MetricsService(collectorRegistry);
+        virtualMachineMetrics = VirtualMachineMetrics.getInstance();
+
+        sharedLabels = new HashMap<String, String>();
+        sharedLabels.put("instance", Hostname.getHostname());
+    }
+
+    /**
+     * The main entry point for the reporting task and is run each time the reporting task is executed by NiFi.
+     * 
+     * @param context the NiFi reporting context for this reporting task
+     */
+    @Override
+    public void onTrigger(ReportingContext context) {
+        logger.debug("triggering prometheus reporting task");
+        final ProcessGroupStatus status = context.getEventAccess().getControllerStatus();
 
         try {
-            logger.warn("Process Group: " + statusId + "; Prometheus gateway: " + gateway);
-            updateAllMetricGroups(status);
-            logger.warn("pushing to registry: " + collectorRegistry.toString());
-            prometheusMetricRegistryBuilder.getPrometheusExporter(gateway).push(collectorRegistry, jobName, labels);
+            populateMetrics(status);
+            pushGateway.push(collectorRegistry, jobName, sharedLabels);
         } catch (IOException e) {
-            logger.warn("Erroring while pushing metrics to pushgateway: " + e.toString());
+            logger.warn("exception while pushing metrics to prometheus pushgateway: " + e.toString());
         }
     }
 
-    private void updateAllMetricGroups(ProcessGroupStatus processGroupStatus) {
+    private void populateMetrics(ProcessGroupStatus processGroupStatus) {
         final List<ProcessorStatus> processorStatuses = new ArrayList<>();
         populateProcessorStatuses(processGroupStatus, processorStatuses);
         for (final ProcessorStatus processorStatus : processorStatuses) {
-            //logger.warn("Updating Processor Metrics on Processor: " + processorStatus.getId());
             metricsService.updateProcessorMetrics(processorStatus);
         }
 
         final List<ConnectionStatus> connectionStatuses = new ArrayList<>();
         populateConnectionStatuses(processGroupStatus, connectionStatuses);
-        for (ConnectionStatus connectionStatus: connectionStatuses) {
-            //logger.warn("Updating Processor Metrics on Processor: " + connectionStatus.getId());
+        for (ConnectionStatus connectionStatus : connectionStatuses) {
             metricsService.updateConnectionStatusMetrics(connectionStatus);
         }
 
         final List<PortStatus> inputPortStatuses = new ArrayList<>();
         populateInputPortStatuses(processGroupStatus, inputPortStatuses);
-        for (PortStatus portStatus: inputPortStatuses) {
-            //logger.warn("Updating Processor Metrics on Processor: " + portStatus.getId());
+        for (PortStatus portStatus : inputPortStatuses) {
             metricsService.updatePortStatusMetrics(portStatus);
         }
 
         final List<PortStatus> outputPortStatuses = new ArrayList<>();
         populateOutputPortStatuses(processGroupStatus, outputPortStatuses);
-        for (PortStatus portStatus: outputPortStatuses) {
-            //logger.warn("Updating Processor Metrics on Processor: " + portStatus.getId());
+        for (PortStatus portStatus : outputPortStatuses) {
             metricsService.updatePortStatusMetrics(portStatus);
         }
 
-        
         final List<ProcessGroupStatus> processGroupStatuses = new ArrayList<>();
         processGroupStatuses.add(processGroupStatus);
         populateProcessGroupStatuses(processGroupStatus, processGroupStatuses);
-        for (ProcessGroupStatus stat: processGroupStatuses) {
-            logger.warn("Process group " + stat.getName() + " (" + stat.getId() + ") getting status");
-            //logger.warn("Updating Processor Metrics on Processor: " + processGroupStatus.getId());
+        for (ProcessGroupStatus stat : processGroupStatuses) {
             metricsService.updateProcessGroupMetrics(stat);
         }
 
@@ -145,6 +153,7 @@ public class PrometheusReportingTask extends AbstractReportingTask {
         }
     }
 
+    // Taken from https://github.com/apache/nifi/blob/66479464be67917c308ccc344cfff58da325748c/nifi-nar-bundles/nifi-datadog-bundle/nifi-datadog-reporting-task/src/main/java/org/apache/nifi/reporting/datadog/DataDogReportingTask.java#L236-L241
     private void populateProcessorStatuses(final ProcessGroupStatus groupStatus, final List<ProcessorStatus> statuses) {
         statuses.addAll(groupStatus.getProcessorStatus());
         for (final ProcessGroupStatus childGroupStatus : groupStatus.getProcessGroupStatus()) {
@@ -152,6 +161,7 @@ public class PrometheusReportingTask extends AbstractReportingTask {
         }
     }
 
+    // Taken from https://github.com/apache/nifi/blob/66479464be67917c308ccc344cfff58da325748c/nifi-nar-bundles/nifi-datadog-bundle/nifi-datadog-reporting-task/src/main/java/org/apache/nifi/reporting/datadog/DataDogReportingTask.java#L243-L248
     private void populateConnectionStatuses(final ProcessGroupStatus groupStatus, final List<ConnectionStatus> statuses) {
         statuses.addAll(groupStatus.getConnectionStatus());
         for (final ProcessGroupStatus childGroupStatus : groupStatus.getProcessGroupStatus()) {
@@ -159,6 +169,7 @@ public class PrometheusReportingTask extends AbstractReportingTask {
         }
     }
 
+    // Taken from https://github.com/apache/nifi/blob/66479464be67917c308ccc344cfff58da325748c/nifi-nar-bundles/nifi-datadog-bundle/nifi-datadog-reporting-task/src/main/java/org/apache/nifi/reporting/datadog/DataDogReportingTask.java#L250-L255
     private void populateInputPortStatuses(final ProcessGroupStatus groupStatus, final List<PortStatus> statuses) {
         statuses.addAll(groupStatus.getInputPortStatus());
         for (final ProcessGroupStatus childGroupStatus : groupStatus.getProcessGroupStatus()) {
@@ -166,23 +177,12 @@ public class PrometheusReportingTask extends AbstractReportingTask {
         }
     }
 
+    // Taken from https://github.com/apache/nifi/blob/66479464be67917c308ccc344cfff58da325748c/nifi-nar-bundles/nifi-datadog-bundle/nifi-datadog-reporting-task/src/main/java/org/apache/nifi/reporting/datadog/DataDogReportingTask.java#L257-L262
     private void populateOutputPortStatuses(final ProcessGroupStatus groupStatus, final List<PortStatus> statuses) {
         statuses.addAll(groupStatus.getOutputPortStatus());
         for (final ProcessGroupStatus childGroupStatus : groupStatus.getProcessGroupStatus()) {
             populateOutputPortStatuses(childGroupStatus, statuses);
         }
-    }
-
-    protected MetricsService getMetricsService(CollectorRegistry registry) {
-        return new MetricsService(registry);
-    }
-
-    protected PrometheusMetricRegistryBuilder getMetricRegistryBuilder(CollectorRegistry registry) {
-        return new PrometheusMetricRegistryBuilder(registry);
-    }
-
-    protected CollectorRegistry getCollectorRegistry() {
-        return new CollectorRegistry();
     }
 
 }
