@@ -4,10 +4,11 @@ Nifi reporting task that sends metrics to a Prometheus Push Gateway
 ## Requirements
 * Java 8
 * Nifi 1.3+
+* Prometheus Push Gateway
 
 ## Building
 ```
-mvn install
+mvn package
 ```
 
 ## Deploying
