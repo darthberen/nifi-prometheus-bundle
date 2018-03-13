@@ -1,18 +1,9 @@
 package org.apache.nifi.reporting.prometheus;
 
-import java.io.IOException;
-import java.util.Map;
-import java.util.HashMap;
-import java.util.ArrayList;
-import java.util.List;
-
 import com.kstruct.gethostname4j.Hostname;
-
 import com.yammer.metrics.core.VirtualMachineMetrics;
-
-import io.prometheus.client.*;
+import io.prometheus.client.CollectorRegistry;
 import io.prometheus.client.exporter.PushGateway;
-
 import org.apache.nifi.annotation.documentation.CapabilityDescription;
 import org.apache.nifi.annotation.documentation.Tags;
 import org.apache.nifi.annotation.lifecycle.OnScheduled;
@@ -26,9 +17,14 @@ import org.apache.nifi.processor.util.StandardValidators;
 import org.apache.nifi.reporting.AbstractReportingTask;
 import org.apache.nifi.reporting.ReportingContext;
 import org.apache.nifi.reporting.prometheus.metrics.MetricsService;
-
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import java.io.IOException;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
 
 /**
  * The Prometheus NiFi reporting task.  It will push NiFi and JVM metrics to a Prometheus Push Gateway.
@@ -36,7 +32,8 @@ import org.slf4j.LoggerFactory;
 @Tags({ "reporting", "prometheus", "metrics" })
 @CapabilityDescription("Publishes metrics from NiFi to a Prometheus Push Gateway.  For accurate and informative reporting, components should have unique names.")
 public class PrometheusReportingTask extends AbstractReportingTask {
-    private Logger logger = LoggerFactory.getLogger(getClass().getName());
+
+    private static final Logger logger = LoggerFactory.getLogger(PrometheusReportingTask.class);
     private MetricsService metricsService;
     private CollectorRegistry collectorRegistry;
     private volatile VirtualMachineMetrics virtualMachineMetrics;
@@ -52,6 +49,7 @@ public class PrometheusReportingTask extends AbstractReportingTask {
             .expressionLanguageSupported(false)
             .addValidator(StandardValidators.NON_EMPTY_VALIDATOR)
             .build();
+
     static final PropertyDescriptor PROMETHEUS_JOB_NAME = new PropertyDescriptor.Builder()
             .name("Prometheus Job Name")
             .description("The desired name for this Prometheus job")
@@ -86,10 +84,10 @@ public class PrometheusReportingTask extends AbstractReportingTask {
 
         collectorRegistry = new CollectorRegistry();
         pushGateway = new PushGateway(gateway);
-        metricsService = new MetricsService(collectorRegistry);
+        metricsService = new MetricsService(getCollectorRegistry());
         virtualMachineMetrics = VirtualMachineMetrics.getInstance();
 
-        sharedLabels = new HashMap<String, String>();
+        sharedLabels = new HashMap<>();
         sharedLabels.put("instance", Hostname.getHostname());
     }
 
@@ -105,7 +103,7 @@ public class PrometheusReportingTask extends AbstractReportingTask {
 
         try {
             populateMetrics(status);
-            pushGateway.push(collectorRegistry, jobName, sharedLabels);
+            getPushGateway().push(getCollectorRegistry(), jobName, sharedLabels);
         } catch (IOException e) {
             logger.warn("exception while pushing metrics to prometheus pushgateway: " + e.toString());
         }
@@ -185,4 +183,11 @@ public class PrometheusReportingTask extends AbstractReportingTask {
         }
     }
 
+    public CollectorRegistry getCollectorRegistry() {
+        return collectorRegistry;
+    }
+
+    public PushGateway getPushGateway() {
+        return pushGateway;
+    }
 }

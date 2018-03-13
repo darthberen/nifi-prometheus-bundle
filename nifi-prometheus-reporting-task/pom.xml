@@ -102,5 +102,11 @@
             <artifactId>guava</artifactId>
             <version>19.0</version>
         </dependency>
+        <!-- test dependencies -->
+        <dependency>
+            <groupId>org.apache.nifi</groupId>
+            <artifactId>nifi-mock</artifactId>
+            <scope>test</scope>
+        </dependency>
     </dependencies>
 </project>

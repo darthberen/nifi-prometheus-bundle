@@ -23,7 +23,7 @@ public class MetricsService {
     private Map<String, Gauge> gaugeTracker;
 
     public MetricsService(CollectorRegistry registry) {
-        gaugeTracker = new HashMap<String, Gauge>();
+        gaugeTracker = new HashMap<>();
 
         for (final MetricInfo info : PROCESSOR_METRICS) {
             gaugeTracker.put(info.getName(), Gauge.build().name(info.getName()).help(info.getHelp())
@@ -209,7 +209,7 @@ public class MetricsService {
      * @return       a hashmap where the status is the key and the count is the value
      */
     protected Map<RunStatus, Double> calculateProcessorStatus(final ProcessGroupStatus status) {
-        Map<RunStatus, Double> statuses = new HashMap<RunStatus, Double>();
+        Map<RunStatus, Double> statuses = new HashMap<>();
         for (RunStatus runStatus : RunStatus.values()) {
             statuses.put(runStatus, 0d);
         }
