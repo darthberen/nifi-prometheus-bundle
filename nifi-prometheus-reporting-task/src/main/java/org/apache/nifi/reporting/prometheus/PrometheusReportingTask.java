@@ -182,12 +182,12 @@ public class PrometheusReportingTask extends AbstractReportingTask {
             populateOutputPortStatuses(childGroupStatus, statuses);
         }
     }
-
-    public CollectorRegistry getCollectorRegistry() {
+    
+    CollectorRegistry getCollectorRegistry() {
         return collectorRegistry;
     }
 
-    public PushGateway getPushGateway() {
+    PushGateway getPushGateway() {
         return pushGateway;
     }
 }
